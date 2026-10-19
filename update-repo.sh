@@ -12,6 +12,10 @@ if ls "$LAB_DIR"/packaging/mesa-git-lab/*.pkg.tar.zst 1>/dev/null 2>&1; then
     cp -u "$LAB_DIR"/packaging/mesa-git-lab/*.pkg.tar.zst .
 fi
 
+if ls "$LAB_DIR"/packaging/nvgd-dkms/*.pkg.tar.zst 1>/dev/null 2>&1; then
+    cp -u "$LAB_DIR"/packaging/nvgd-dkms/*.pkg.tar.zst .
+fi
+
 if ls "$LAB_DIR"/packaging/nouveau-lab-dkms/*.pkg.tar.zst 1>/dev/null 2>&1; then
     cp -u "$LAB_DIR"/packaging/nouveau-lab-dkms/*.pkg.tar.zst .
 fi
@@ -30,6 +34,7 @@ fi
 
 echo "==> Atualizando base de dados do repositório (repo-add)..."
 repo-add -n nouveau-lab.db.tar.gz *.pkg.tar.zst
+repo-add -n nvgd-dkms.db.tar.gz *.pkg.tar.zst
 
 echo "==> Enviando alterações para o GitHub..."
 cd "$REPO_DIR"
