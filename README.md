@@ -27,6 +27,7 @@ sudo pacman -Sy
 - **`nouveau-lab-dkms`**: Módulo de kernel Nouveau como DKMS (recompila sozinho a cada atualização de kernel do CachyOS/Arch), incluindo firmware host loader 615.
 - **`gpu-screen-recorder-git`**: GPU Screen Recorder adaptado para suporte nativo ao nosso driver Nouveau VA-API NVENC (GeForce RTX 3050).
 - **`gpu-screen-recorder-ui-git`**: Interface gráfica (GUI) e atalho/ícone de desktop para o GPU Screen Recorder.
+- **`gpu-screen-recorder-notification-git`**: Overlay visual de notificações na tela (ShadowPlay-style) para eventos de gravação e replay.
 
 ---
 
@@ -35,7 +36,7 @@ sudo pacman -Sy
 Para instalar os pacotes diretamente via pacman:
 
 ```bash
-sudo pacman -S mesa-git nouveau-lab-dkms gpu-screen-recorder-git gpu-screen-recorder-ui-git
+sudo pacman -S mesa-git nouveau-lab-dkms gpu-screen-recorder-git gpu-screen-recorder-ui-git gpu-screen-recorder-notification-git
 ```
 
 Para atualizar no dia a dia junto com os demais pacotes do sistema:
