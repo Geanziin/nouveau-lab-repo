@@ -16,6 +16,10 @@ if ls "$LAB_DIR"/packaging/nouveau-lab-dkms/*.pkg.tar.zst 1>/dev/null 2>&1; then
     cp -u "$LAB_DIR"/packaging/nouveau-lab-dkms/*.pkg.tar.zst .
 fi
 
+if ls "$LAB_DIR"/packaging/gpu-screen-recorder-git/*.pkg.tar.zst 1>/dev/null 2>&1; then
+    cp -u "$LAB_DIR"/packaging/gpu-screen-recorder-git/*.pkg.tar.zst .
+fi
+
 echo "==> Atualizando base de dados do repositório (repo-add)..."
 repo-add -n -R nouveau-lab.db.tar.gz *.pkg.tar.zst
 
