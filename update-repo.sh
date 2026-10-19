@@ -29,7 +29,7 @@ if ls "$LAB_DIR"/packaging/gpu-screen-recorder-notification-git/*.pkg.tar.zst 1>
 fi
 
 echo "==> Atualizando base de dados do repositório (repo-add)..."
-repo-add -n -R nouveau-lab.db.tar.gz *.pkg.tar.zst
+repo-add -n nouveau-lab.db.tar.gz *.pkg.tar.zst
 
 echo "==> Enviando alterações para o GitHub..."
 cd "$REPO_DIR"

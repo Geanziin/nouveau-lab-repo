@@ -23,7 +23,7 @@ sudo pacman -Sy
 
 ## 📦 Pacotes disponíveis
 
-- **`mesa-git`**: Mesa 26.3-devel compilado com suporte a NVENC H.264, decodificação Vulkan Video, correções Zink YUV e aceleração gráfica.
+- **`mesa-git`**: Mesa compilado com o novo driver OpenGL direto **NVGD** (renderização nativa direta no hardware para NVIDIA Ampere/Turing/Ada sem tradução por Zink), NVENC H.264 acelerado por hardware e decodificação Vulkan Video.
 - **`nouveau-lab-dkms`**: Módulo de kernel Nouveau como DKMS (recompila sozinho a cada atualização de kernel do CachyOS/Arch), incluindo firmware host loader 615.
 - **`gpu-screen-recorder-git`**: GPU Screen Recorder adaptado para suporte nativo ao nosso driver Nouveau VA-API NVENC (GeForce RTX 3050).
 - **`gpu-screen-recorder-ui-git`**: Interface gráfica (GUI) e atalho/ícone de desktop para o GPU Screen Recorder.
