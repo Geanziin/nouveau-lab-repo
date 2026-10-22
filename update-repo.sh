@@ -32,14 +32,16 @@ for name, directory in packages.items():
     if best is None:
         raise SystemExit(f'Missing package: {name}; refusing to publish an incomplete repository')
     version, source = best
-    dest = root / source.name
+    # GitHub Release asset names replace ':' with '.'. Use the same filename
+    # in Pages and the pacman database; keep the epoch in package metadata.
+    dest = root / source.name.replace(':', '.')
     if source.resolve() != dest.resolve():
         shutil.copy2(source, dest)
     print(f'{name}: {version}')
     selected.append(str(dest))
 # repo-add replaces entries by package name. Include exactly one version of
 # every supported package, including lib32, instead of adding all archives.
-subprocess.run(['repo-add', '-n', str(root / 'nvgd.db.tar.gz'), *selected], check=True)
+subprocess.run(['repo-add', str(root / 'nvgd.db.tar.gz'), *selected], check=True)
 PY
 
 if [[ "${1:-}" == --publish ]]; then
@@ -52,6 +54,7 @@ if [[ "${1:-}" == --publish ]]; then
         gh release create packages --repo Geanziin/nvgd-repo --title "nvgd packages" --notes "Arch/CachyOS binary repository."
     fi
     gh release upload packages "$REPO_DIR"/x86_64/*.pkg.tar.zst \
+        "$REPO_DIR"/x86_64/nvgd.db "$REPO_DIR"/x86_64/nvgd.files \
         "$REPO_DIR"/x86_64/nvgd.db.tar.gz "$REPO_DIR"/x86_64/nvgd.files.tar.gz \
         --repo Geanziin/nvgd-repo --clobber
 fi
