@@ -1,46 +1,69 @@
-# nouveau-lab Arch Linux / CachyOS Repository
+# nvgd Arch Linux / CachyOS repository
 
-Repositório customizado com pacotes binários prontos para uso do **Mesa** (com suporte a NVENC H.264 / decodificação Vulkan Video) e do módulo de kernel **Nouveau DKMS** (com suporte nativo ao GSP-RM 615.78.08 e telemetria para RTX 3050 GA107).
+Pacotes do [nvgd](https://github.com/Geanziin/nvgd) e do
+[nvgd-dkms](https://github.com/Geanziin/nvgd-dkms).
+OpenGL usa nvc0/NAK; Vulkan usa **NVK/NAK nativo**, sem Zink ou ANGLE.
+Os ICDs Vulkan mantêm o nome upstream `nouveau_icd`.
 
-## 🚀 Como adicionar ao seu sistema
+## Configuração
 
-Abra o arquivo `/etc/pacman.conf` com seu editor preferido (como `sudo nano /etc/pacman.conf` ou `sudo micro /etc/pacman.conf`) e adicione as seguintes linhas no final do arquivo:
+Coloque este bloco **antes dos outros repositórios** em `/etc/pacman.conf`:
 
 ```ini
-[nouveau-lab]
+[nvgd]
 SigLevel = Optional TrustAll
-Server = https://geanziin.github.io/nouveau-lab-repo/$arch
-Server = https://github.com/Geanziin/nouveau-lab-repo/releases/download/packages
+Server = https://geanziin.github.io/nvgd-repo/$arch
 ```
 
-Em seguida, atualize o banco de dados de repositórios do pacman:
+Remova blocos antigos `[nouveau-lab]` e `[nvgd-dkms]`. Para migrar automaticamente:
 
 ```bash
-sudo pacman -Sy
+curl -fLO https://raw.githubusercontent.com/Geanziin/nvgd-repo/main/install.sh
+# Revise o script antes de executá-lo.
+sudo bash install.sh
 ```
 
----
+Os pacotes não são assinados; `Optional TrustAll` reduz a verificação de confiança.
+Use somente se confiar neste repositório. Para atualizar, use `sudo pacman -Syu`,
+não uma atualização parcial com `pacman -Sy` seguida de instalação isolada.
 
-## 📦 Pacotes disponíveis
+## Pacotes
 
-- **`mesa-git`**: Mesa compilado com o novo driver OpenGL direto **NVGD** (renderização nativa direta no hardware para NVIDIA Ampere/Turing/Ada sem tradução por Zink), NVENC H.264 acelerado por hardware e decodificação Vulkan Video.
-- **`nouveau-lab-dkms`**: Módulo de kernel Nouveau como DKMS (recompila sozinho a cada atualização de kernel do CachyOS/Arch), incluindo firmware host loader 615.
-- **`gpu-screen-recorder-git`**: GPU Screen Recorder adaptado para suporte nativo ao nosso driver Nouveau VA-API NVENC (GeForce RTX 3050).
-- **`gpu-screen-recorder-ui-git`**: Interface gráfica (GUI) e atalho/ícone de desktop para o GPU Screen Recorder.
-- **`gpu-screen-recorder-notification-git`**: Overlay visual de notificações na tela (ShadowPlay-style) para eventos de gravação e replay.
+| Pacote | Conteúdo |
+| --- | --- |
+| `nvgd-dkms` | Módulo de kernel nvgd com GSP e telemetria |
+| `mesa-git` | Mesa 64-bit, OpenGL nativo, NVK, VA-API e vídeo |
+| `lib32-mesa-git` | Mesa 32-bit, OpenGL nativo e NVK para Steam/Proton |
+| `gpu-screen-recorder-git` | Captura e gravação |
+| `gpu-screen-recorder-ui-git` | Interface gráfica |
+| `gpu-screen-recorder-notification-git` | Notificações de gravação e replay |
 
----
-
-## ⚡ Como instalar
-
-Para instalar os pacotes diretamente via pacman:
+Mesa 32/64-bit: `1:27.0.0_devel.r231957.g72a232a17dbf-1`.
+DKMS: `1.0.0-18`. O build 32-bit agora otimiza C/C++ e Rust em nível 3,
+incluindo NVK, NIR e NAK. Isso corrige overhead de CPU do build anterior;
+não representa garantia de FPS para um jogo específico.
+NVENC: upload de NV12 em blocos de 16 bytes no caminho de cópia, preservando
+o zero-copy padrão. Decoder H.264: menos limpeza de memória e realocações
+do bitstream. As fences e a sincronização de vídeo foram mantidas.
 
 ```bash
-sudo pacman -S mesa-git nouveau-lab-dkms gpu-screen-recorder-git gpu-screen-recorder-ui-git gpu-screen-recorder-notification-git
+sudo pacman -Syu nvgd/mesa-git nvgd/lib32-mesa-git nvgd/nvgd-dkms
 ```
 
-Para atualizar no dia a dia junto com os demais pacotes do sistema:
+Reinicie após atualizar o módulo de kernel; para atualizar apenas Mesa,
+reabra os aplicativos para carregar as bibliotecas novas.
+
+## Atualização pelo mantenedor
+
+`./update-repo.sh` seleciona por metadados/vercmp a versão mais recente dos seis
+pacotes em `$LAB_DIR/packaging` ou `x86_64` e gera `nvgd.db.tar.gz`.
+`./update-repo.sh --publish` também faz commit/push e atualiza o release
+[`packages`](https://github.com/Geanziin/nvgd-repo/releases/tag/packages).
+As receitas locais estão em `packaging/`; ainda dependem da árvore de build do lab.
+
+Teste de referência dos hotpaths (144 combinações NV12 e limites do bitstream):
 
 ```bash
-sudo pacman -Syu
+python3 tests/video-hotpaths.py /caminho/para/mesa
+NVGD_TEST_SANITIZE=1 python3 tests/video-hotpaths.py /caminho/para/mesa
 ```

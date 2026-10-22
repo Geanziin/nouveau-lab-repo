@@ -1,0 +1,54 @@
+# Maintainer: nouveau-lab
+_pkgname="gpu-screen-recorder"
+pkgname="$_pkgname-git"
+pkgver=6.1.4.r6.ga0300b0
+pkgrel=1
+pkgdesc="A shadowplay-like screen recorder for Linux (nouveau-lab build: Nouveau VA-API NVENC)"
+arch=('x86_64')
+url="https://github.com/Geanziin/gpu-screen-recorder-nouveau-lab"
+license=('GPL-3.0-only')
+depends=(
+  'dbus'
+  'ffmpeg'
+  'libcap'
+  'libdrm'
+  'libglvnd'
+  'libjpeg-turbo'
+  'libpipewire'
+  'libpulse'
+  'libva'
+  'libx11'
+  'libxcomposite'
+  'libxdamage'
+  'libxfixes'
+  'libxrandr'
+  'wayland'
+)
+makedepends=(
+  'git'
+  'meson'
+  'ninja'
+)
+install="$_pkgname.install"
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+options=('!debug' 'strip')
+
+_src=/home/gean/Documents/nouveau-lab/src/gpu-screen-recorder
+
+build() {
+  if [ ! -f "$srcdir/_build/build.ninja" ]; then
+    meson setup "$srcdir/_build" "$_src" \
+      --prefix=/usr \
+      --buildtype=release \
+      -Dsystemd=true \
+      -Dcapabilities=false \
+      -Dportal=true \
+      -Dapp_audio=true
+  fi
+  ninja -C "$srcdir/_build"
+}
+
+package() {
+  DESTDIR="$pkgdir" ninja -C "$srcdir/_build" install
+}

@@ -1,57 +1,46 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=============================================="
-echo " Instalador nouveau-lab (Mesa Git + NVENC)    "
-echo "=============================================="
-
-if [ "$EUID" -ne 0 ]; then
-  echo "Erro: Execute como root ou com sudo:"
-  echo "  curl -sSL https://raw.githubusercontent.com/Geanziin/nouveau-lab-repo/main/install.sh | sudo bash"
-  exit 1
+if [[ "$EUID" -ne 0 ]]; then
+    echo 'Run with sudo: sudo bash install.sh'
+    exit 1
 fi
 
-echo "==> Verificando repositório no /etc/pacman.conf..."
-if grep -q "\[nouveau-lab\]" /etc/pacman.conf; then
-    echo "Repositório [nouveau-lab] já existe no /etc/pacman.conf."
-else
-    echo "==> Adicionando [nouveau-lab] ao /etc/pacman.conf com prioridade..."
-    cp /etc/pacman.conf /etc/pacman.conf.bak
+python3 - <<'PY'
+import datetime, pathlib, re, shutil
+path = pathlib.Path('/etc/pacman.conf')
+original = path.read_text()
+sections = re.split(r'(?m)(?=^\s*\[[^\]\n]+\]\s*$)', original)
+kept = []
+for section in sections:
+    match = re.match(r'\s*\[([^\]]+)\]', section)
+    if match and match[1] in ('nvgd', 'nvgd-dkms', 'nouveau-lab'):
+        continue
+    kept.append(section)
+block = ('[nvgd]\n'
+         'SigLevel = Optional TrustAll\n'
+         'Server = https://geanziin.github.io/nvgd-repo/$arch\n'
+         '\n')
+# Put nvgd before every other repository, but after [options].
+index = next((i for i, section in enumerate(kept)
+              if re.match(r'\s*\[(?!options\])[^\]]+\]', section)), len(kept))
+kept.insert(index, block)
+updated = ''.join(kept)
+if updated != original:
+    backup = path.with_name('pacman.conf.nvgd-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
+    shutil.copy2(path, backup)
+    path.write_text(updated)
+    print('Backup:', backup)
+print('Repository configured: [nvgd] -> https://geanziin.github.io/nvgd-repo/$arch')
+PY
 
-    # Tenta inserir antes de [cachyos-v3] ou [cachyos] ou [core], ou no final
-    python3 -c '
-with open("/etc/pacman.conf", "r") as f:
-    lines = f.readlines()
-
-new_lines = []
-inserted = False
-for line in lines:
-    clean = line.strip()
-    if clean in ["[cachyos-v3]", "[cachyos]", "[core]"] and not inserted:
-        new_lines.append("[nouveau-lab]\n")
-        new_lines.append("SigLevel = Optional TrustAll\n")
-        new_lines.append("Server = https://geanziin.github.io/nouveau-lab-repo/$arch\n\n")
-        inserted = True
-    new_lines.append(line)
-
-if not inserted:
-    new_lines.append("\n[nouveau-lab]\nSigLevel = Optional TrustAll\nServer = https://geanziin.github.io/nouveau-lab-repo/$arch\n")
-
-with open("/etc/pacman.conf", "w") as f:
-    f.writelines(new_lines)
-'
+if [[ "${1:-}" == --configure-only ]]; then
+    exit 0
 fi
 
-echo "==> Sincronizando banco de dados do pacman..."
-pacman -Sy
+# Full upgrade avoids mixing Arch repository snapshots.
+pacman -Syu --needed nvgd/nvgd-dkms nvgd/mesa-git nvgd/lib32-mesa-git \
+    nvgd/gpu-screen-recorder-git nvgd/gpu-screen-recorder-ui-git \
+    nvgd/gpu-screen-recorder-notification-git
 
-echo "==> Instalando mesa-git customizado..."
-pacman -S --needed nouveau-lab/mesa-git
-
-echo ""
-echo "=============================================="
-echo " Instalação concluída com sucesso!            "
-echo " Se este PC usar GPU NVIDIA com Nouveau,      "
-echo " você também pode rodar:                      "
-echo "   sudo pacman -S nouveau-lab-dkms            "
-echo "=============================================="
+echo 'Installation complete. Reboot after changing the kernel module.'

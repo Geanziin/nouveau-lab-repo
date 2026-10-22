@@ -1,55 +1,60 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="/home/gean/Documents/nouveau-lab-repo"
-LAB_DIR="/home/gean/Documents/nouveau-lab"
+REPO_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+LAB_DIR="${LAB_DIR:-/home/gean/Documents/nouveau-lab}"
+export REPO_DIR LAB_DIR
 
-echo "==> Copiando novos pacotes de packaging/ para o repositório..."
-cd "$REPO_DIR/x86_64"
+# Read package metadata: glob ordering is not Arch version ordering.
+python3 - <<'PY'
+import os, pathlib, shutil, subprocess
+root = pathlib.Path(os.environ['REPO_DIR']) / 'x86_64'
+root.mkdir(exist_ok=True)
+lab = pathlib.Path(os.environ['LAB_DIR']) / 'packaging'
+packages = {
+    'mesa-git': 'mesa-git-lab',
+    'lib32-mesa-git': 'lib32-mesa-git',
+    'nvgd-dkms': 'nvgd-dkms',
+    'gpu-screen-recorder-git': 'gpu-screen-recorder-git',
+    'gpu-screen-recorder-ui-git': 'gpu-screen-recorder-ui-git',
+    'gpu-screen-recorder-notification-git': 'gpu-screen-recorder-notification-git',
+}
+selected = []
+for name, directory in packages.items():
+    best = None
+    for path in list((lab / directory).glob('*.pkg.tar.zst')) + list(root.glob('*.pkg.tar.zst')):
+        fields = subprocess.check_output(['pacman', '-Qp', '--', str(path)], text=True).split()
+        if fields[0] != name:
+            continue
+        version = fields[1]
+        if best is None or int(subprocess.check_output(['vercmp', version, best[0]], text=True)) > 0:
+            best = (version, path)
+    if best is None:
+        raise SystemExit(f'Missing package: {name}; refusing to publish an incomplete repository')
+    version, source = best
+    dest = root / source.name
+    if source.resolve() != dest.resolve():
+        shutil.copy2(source, dest)
+    print(f'{name}: {version}')
+    selected.append(str(dest))
+# repo-add replaces entries by package name. Include exactly one version of
+# every supported package, including lib32, instead of adding all archives.
+subprocess.run(['repo-add', '-n', str(root / 'nvgd.db.tar.gz'), *selected], check=True)
+PY
 
-# Copia pacotes mais recentes se existirem
-if ls "$LAB_DIR"/packaging/mesa-git-lab/*.pkg.tar.zst 1>/dev/null 2>&1; then
-    cp -u "$LAB_DIR"/packaging/mesa-git-lab/*.pkg.tar.zst .
+if [[ "${1:-}" == --publish ]]; then
+    git -C "$REPO_DIR" add -- .gitignore x86_64 README.md install.sh update-repo.sh packaging tests
+    if ! git -C "$REPO_DIR" diff --cached --quiet; then
+        git -C "$REPO_DIR" commit -m "Update nvgd repository packages $(date +'%Y-%m-%d')"
+    fi
+    git -C "$REPO_DIR" push origin main
+    if ! gh release view packages --repo Geanziin/nvgd-repo >/dev/null 2>&1; then
+        gh release create packages --repo Geanziin/nvgd-repo --title "nvgd packages" --notes "Arch/CachyOS binary repository."
+    fi
+    gh release upload packages "$REPO_DIR"/x86_64/*.pkg.tar.zst \
+        "$REPO_DIR"/x86_64/nvgd.db.tar.gz "$REPO_DIR"/x86_64/nvgd.files.tar.gz \
+        --repo Geanziin/nvgd-repo --clobber
 fi
 
-if ls "$LAB_DIR"/packaging/nvgd-dkms/*.pkg.tar.zst 1>/dev/null 2>&1; then
-    cp -u "$LAB_DIR"/packaging/nvgd-dkms/*.pkg.tar.zst .
-fi
-
-if ls "$LAB_DIR"/packaging/nouveau-lab-dkms/*.pkg.tar.zst 1>/dev/null 2>&1; then
-    cp -u "$LAB_DIR"/packaging/nouveau-lab-dkms/*.pkg.tar.zst .
-fi
-
-if ls "$LAB_DIR"/packaging/gpu-screen-recorder-git/*.pkg.tar.zst 1>/dev/null 2>&1; then
-    cp -u "$LAB_DIR"/packaging/gpu-screen-recorder-git/*.pkg.tar.zst .
-fi
-
-if ls "$LAB_DIR"/packaging/gpu-screen-recorder-ui-git/*.pkg.tar.zst 1>/dev/null 2>&1; then
-    cp -u "$LAB_DIR"/packaging/gpu-screen-recorder-ui-git/*.pkg.tar.zst .
-fi
-
-if ls "$LAB_DIR"/packaging/gpu-screen-recorder-notification-git/*.pkg.tar.zst 1>/dev/null 2>&1; then
-    cp -u "$LAB_DIR"/packaging/gpu-screen-recorder-notification-git/*.pkg.tar.zst .
-fi
-
-echo "==> Atualizando base de dados do repositório (repo-add)..."
-repo-add -n nouveau-lab.db.tar.gz *.pkg.tar.zst
-repo-add -n nvgd-dkms.db.tar.gz *.pkg.tar.zst
-
-echo "==> Enviando alterações para o GitHub..."
-cd "$REPO_DIR"
-git add .
-if ! git diff --cached --quiet; then
-    git commit -m "Update repository packages $(date +'%Y-%m-%d %H:%M')"
-    git push origin main
-    echo "==> Atualizando GitHub Release 'packages'..."
-    gh release upload packages x86_64/* --clobber
-    echo "==> Repositório atualizado e publicado no GitHub Pages com sucesso!"
-else
-    echo "==> Nenhuma alteração detectada nos pacotes."
-fi
-
-echo "==> Atualizando o cache local do pacman..."
-sudo pacman -Sy
-
-echo "==> Tudo pronto! Você pode rodar: sudo pacman -Syu"
+echo 'Repository generated. Publish with ./update-repo.sh --publish.'
+echo 'Clients can update with sudo pacman -Syu; no partial upgrade is performed here.'

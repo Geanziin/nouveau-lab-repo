@@ -1,0 +1,46 @@
+# Maintainer: nvgd-lab
+# nvgd: Driver nativo para GPUs NVIDIA Turing e mais recentes (GTX Serie 16, RTX 20/30/40)
+# com microcodigo GSP, P-State P0 de alta performance e telemetria nativa.
+# NVIDIA-DERIVED: private local use only, not for redistribution/upstream.
+pkgname=nvgd-dkms
+pkgver=1.0.0
+pkgrel=18
+pkgdesc="nvgd: Next-Gen NVIDIA Driver with GSP P0 Boost for Turing+ GPUs (GTX 16xx, RTX 20/30/40) (DKMS)"
+arch=('x86_64')
+url="https://github.com/Geanziin/nvgd-dkms"
+license=('GPL-2.0-only' 'MIT')
+depends=('dkms' 'linux-cachyos-headers' 'clang' 'lld' 'llvm' 'pahole'
+         'linux-firmware-nvidia')
+provides=('nouveau-lab-dkms')
+conflicts=('nouveau-lab-dkms')
+install=nvgd-dkms.install
+options=('!strip' '!debug')
+backup=('etc/mkinitcpio.conf.d/90-nvgd.conf')
+
+_lab=/home/gean/Documents/nouveau-lab
+_loader_sha=a209bded1de8aec02548dd75daa37de6257521b0fb1c57c49c737b13f44a70d9
+
+package() {
+  local loader="$_lab/reference/nvidia/host-loader-ga107-615.78.08-01/firmware/nvidia/ga107/gsp/sec2-bl-615.78.08.bin"
+  echo "$_loader_sha  $loader" | sha256sum -c - || return 1
+
+  local dest="$pkgdir/usr/src/nvgd-$pkgver"
+  install -d "$dest"
+  tar -C "$_lab/src/linux/drivers/gpu/drm/nouveau" \
+      --exclude='*.o' --exclude='*.ko' --exclude='*.cmd' --exclude='*.mod' \
+      --exclude='*.mod.c' --exclude='*.a' --exclude='*.symvers' \
+      --exclude='modules.order' --exclude='.tmp_*' -cf - . | tar -C "$dest" -xf -
+
+  install -Dm644 "$_lab/src/linux/include/uapi/drm/nouveau_drm.h" \
+      "$dest/lab-uapi/nouveau_drm.h"
+  install -m644 "$startdir/dkms.conf" "$dest/dkms.conf"
+  install -m644 "$startdir/Makefile" "$dest/Makefile"
+
+  install -Dm644 "$loader" \
+      "$pkgdir/usr/lib/firmware/nvidia/ga102/gsp/sec2-bl-615.78.08.bin"
+  install -Dm755 "$startdir/nvgd-status" "$pkgdir/usr/bin/nvgd-status"
+  install -Dm644 "$startdir/mkinitcpio-nvgd.conf" \
+      "$pkgdir/etc/mkinitcpio.conf.d/90-nvgd.conf"
+  install -Dm644 "$startdir/nvgd-blacklist-nouveau.conf" \
+      "$pkgdir/usr/lib/modprobe.d/nvgd-blacklist-nouveau.conf"
+}

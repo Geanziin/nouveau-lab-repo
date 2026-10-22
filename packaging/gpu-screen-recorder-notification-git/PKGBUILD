@@ -1,0 +1,45 @@
+# Maintainer: nouveau-lab
+_pkgname="gpu-screen-recorder-notification"
+pkgname="$_pkgname-git"
+pkgver=1.3.6.r1.g8f22207
+pkgrel=1
+pkgdesc="Notification in the style of ShadowPlay for GPU Screen Recorder"
+url="https://github.com/Geanziin/gpu-screen-recorder-notification-nouveau-lab"
+license=('GPL-3.0-only')
+arch=('x86_64')
+
+depends=(
+  'libglvnd'
+  'libx11'
+  'libxext'
+  'libxkbcommon'
+  'libxrandr'
+  'libxrender'
+  'pango'
+  'wayland'
+)
+makedepends=(
+  'git'
+  'meson'
+  'ninja'
+  'wayland-scanner'
+)
+
+provides=("$_pkgname" "gsr-notify")
+conflicts=("$_pkgname")
+options=('!debug' 'strip')
+
+_src=/home/gean/Documents/nouveau-lab/src/gpu-screen-recorder-notification
+
+build() {
+  if [ ! -f "$srcdir/_build/build.ninja" ]; then
+    meson setup "$srcdir/_build" "$_src" \
+      --prefix=/usr \
+      --buildtype=release
+  fi
+  ninja -C "$srcdir/_build"
+}
+
+package() {
+  DESTDIR="$pkgdir" ninja -C "$srcdir/_build" install
+}

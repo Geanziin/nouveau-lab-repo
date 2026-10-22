@@ -1,0 +1,69 @@
+# Maintainer: nvgd
+# Mesa 32-bit do lab: nvgd OpenGL (nvc0/NAK) + NVK, sem LLVM.
+# NVIDIA-DERIVED: private local use only, not for redistribution/upstream.
+pkgname=lib32-mesa-git
+epoch=1
+pkgver=27.0.0_devel.r231957.g72a232a17dbf
+pkgrel=1
+pkgdesc="Mesa 32-bit (nvgd direct OpenGL driver and NVK) - private local use"
+arch=('x86_64')
+url="https://github.com/Geanziin/nvgd"
+license=('custom')
+depends=('mesa' 'lib32-libdrm' 'lib32-wayland' 'lib32-libxxf86vm' 'lib32-libxdamage'
+         'lib32-libxshmfence' 'lib32-libelf' 'lib32-expat' 'lib32-libx11'
+         'lib32-libxext' 'lib32-libxfixes' 'lib32-libxrandr' 'lib32-libxcb'
+         'lib32-zlib' 'lib32-zstd' 'lib32-libdisplay-info' 'lib32-spirv-tools'
+         'lib32-vulkan-icd-loader' 'lib32-systemd' 'lib32-gcc-libs' 'lib32-glibc')
+makedepends=('meson' 'ninja' 'gcc' 'pkgconf' 'rust' 'rust-bindgen' 'cbindgen'
+             'python-mako' 'python-yaml' 'glslang' 'wayland-protocols'
+             'xorgproto' 'lib32-libxrandr')
+provides=('lib32-mesa' 'lib32-vulkan-nouveau' 'lib32-vulkan-driver'
+          'lib32-opengl-driver' 'lib32-nouveau-dri' 'lib32-mesa-dri'
+          'lib32-mesa-libgl' 'lib32-vulkan-intel' 'lib32-vulkan-radeon'
+          'lib32-vulkan-swrast' 'lib32-vulkan-mesa-device-select'
+          'lib32-vulkan-mesa-layers' 'lib32-mesa-vulkan-layers'
+          'lib32-libva-mesa-driver' 'lib32-opencl-mesa')
+conflicts=('lib32-mesa' 'lib32-vulkan-nouveau' 'lib32-vulkan-intel'
+           'lib32-vulkan-radeon' 'lib32-vulkan-swrast'
+           'lib32-vulkan-mesa-device-select' 'lib32-vulkan-mesa-layers'
+           'lib32-mesa-vulkan-layers' 'lib32-libva-mesa-driver'
+           'lib32-opencl-mesa')
+options=('!debug' 'strip')
+source=()
+sha256sums=()
+
+# Build tree configured with:
+#   meson setup _build32 <mesa> --cross-file /tmp/opencode/meson-i686.ini \
+#     -Dlibdir=lib32 -Dllvm=disabled -Dgallium-drivers=nouveau,softpipe,zink \
+#     -Dvulkan-drivers=nouveau -Dmesa-clc=system -Dbuildtype=release ...
+# The i686 Rust target and BINDGEN_EXTRA_CLANG_ARGS are required.
+_src=/home/gean/Documents/nouveau-lab/src/mesa
+_build=/home/gean/Documents/nouveau-lab/packaging/mesa-git-lab/src/_build32
+
+build() {
+  # NVK's build-time shader tools run natively, not as i686 binaries.
+  local _native_build="${_build%32}"
+  export PATH="$_native_build/src/compiler/clc:$_native_build/src/compiler/spirv:$PATH"
+  export PKG_CONFIG_LIBDIR=/usr/lib32/pkgconfig:/usr/share/pkgconfig
+  export BINDGEN_EXTRA_CLANG_ARGS="--target=i686-unknown-linux-gnu"
+  # This preconfigured cross build does not inherit makepkg's optimization
+  # flags. Set Meson's optimization for both C/C++ (NVK/NIR) and Rust (NAK).
+  # Keep the i686 CPU baseline so repository packages remain portable.
+  meson configure "$_build" -Dbuildtype=release -Doptimization=3 -Db_ndebug=true
+  ninja -C "$_build" -j"${LAB_JOBS:-12}"
+}
+
+package() {
+  DESTDIR="$pkgdir" ninja -C "$_build" install
+
+  # Arquivos independentes de arquitetura pertencem ao mesa-git 64-bit.
+  rm -rf "$pkgdir/usr/include" "$pkgdir/usr/share/drirc.d" \
+         "$pkgdir/usr/share/glvnd" "$pkgdir/usr/share/man" \
+         "$pkgdir/usr/share/doc" "$pkgdir/usr/bin" \
+         "$pkgdir/usr/share/vulkan/implicit_layer.d" \
+         "$pkgdir/usr/share/vulkan/explicit_layer.d"
+
+  ln -sf /usr/lib32/libGLX_mesa.so.0 "$pkgdir/usr/lib32/libGLX_indirect.so.0"
+  install -Dm644 "$_src/docs/license.rst" \
+    "$pkgdir/usr/share/licenses/$pkgname/license.rst"
+}
