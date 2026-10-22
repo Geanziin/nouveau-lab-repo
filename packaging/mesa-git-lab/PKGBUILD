@@ -5,7 +5,7 @@
 pkgbase=mesa-git
 pkgname=mesa-git
 epoch=1
-pkgver=27.0.0_devel.r231957.g72a232a17dbf
+pkgver=27.0.0_devel.r231961.ga1c7b37fcb7b
 pkgrel=1
 pkgdesc="Mesa (nvgd direct OpenGL driver, GA107 NVENC/VK video decode) - private local use"
 arch=('x86_64')

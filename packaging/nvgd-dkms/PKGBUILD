@@ -4,7 +4,7 @@
 # NVIDIA-DERIVED: private local use only, not for redistribution/upstream.
 pkgname=nvgd-dkms
 pkgver=1.0.0
-pkgrel=18
+pkgrel=20
 pkgdesc="nvgd: Next-Gen NVIDIA Driver with GSP P0 Boost for Turing+ GPUs (GTX 16xx, RTX 20/30/40) (DKMS)"
 arch=('x86_64')
 url="https://github.com/Geanziin/nvgd-dkms"

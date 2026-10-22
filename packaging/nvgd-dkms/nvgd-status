@@ -1,0 +1,15 @@
+#!/bin/sh
+echo "kernel:            $(uname -r)"
+echo "dkms:              $(dkms status nvgd 2>/dev/null | head -2 | tr '\n' ' ')"
+echo "modulo em disco:   $(modinfo -n nvgd 2>/dev/null)"
+echo "srcversion disco:  $(modinfo -F srcversion nvgd 2>/dev/null)"
+if [ -d /sys/module/nvgd ]; then
+    echo "srcversion vivo:   $(cat /sys/module/nvgd/srcversion)"
+    echo "gsp_fw_ver:        $(cat /sys/module/nvgd/parameters/gsp_fw_ver 2>/dev/null)"
+elif [ -d /sys/module/nouveau ]; then
+    echo "modulo ativo:      nouveau (srcversion: $(cat /sys/module/nouveau/srcversion))"
+else
+    echo "driver:            nao carregado"
+fi
+echo "clocks e energia:  $(cat /sys/class/hwmon/hwmon0/freq1_input 2>/dev/null | awk '{printf "GPU: %d MHz ", $1/1000000}') $(cat /sys/class/hwmon/hwmon0/power1_average 2>/dev/null | awk '{printf "Power: %.1f W\n", $1/1000000}')"
+dmesg 2>/dev/null | grep -E "(nvgd|nouveau).*gsp: RM version|NVGD:" | tail -3

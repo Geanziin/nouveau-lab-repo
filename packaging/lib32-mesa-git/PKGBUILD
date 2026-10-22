@@ -3,7 +3,7 @@
 # NVIDIA-DERIVED: private local use only, not for redistribution/upstream.
 pkgname=lib32-mesa-git
 epoch=1
-pkgver=27.0.0_devel.r231957.g72a232a17dbf
+pkgver=27.0.0_devel.r231961.ga1c7b37fcb7b
 pkgrel=1
 pkgdesc="Mesa 32-bit (nvgd direct OpenGL driver and NVK) - private local use"
 arch=('x86_64')
@@ -32,28 +32,40 @@ options=('!debug' 'strip')
 source=()
 sha256sums=()
 
-# Build tree configured with:
-#   meson setup _build32 <mesa> --cross-file /tmp/opencode/meson-i686.ini \
-#     -Dlibdir=lib32 -Dllvm=disabled -Dgallium-drivers=nouveau,softpipe,zink \
-#     -Dvulkan-drivers=nouveau -Dmesa-clc=system -Dbuildtype=release ...
-# The i686 Rust target and BINDGEN_EXTRA_CLANG_ARGS are required.
+# Native shader tools come from the lab's 64-bit build. The cross file is
+# shipped with the recipe instead of relying on wrappers in /tmp after reboot.
 _src=/home/gean/Documents/nouveau-lab/src/mesa
-_build=/home/gean/Documents/nouveau-lab/packaging/mesa-git-lab/src/_build32
+_native_build=/home/gean/Documents/nouveau-lab/packaging/mesa-git-lab/src/_build
 
 build() {
+  local _build="$srcdir/_build"
   # NVK's build-time shader tools run natively, not as i686 binaries.
-  local _native_build="${_build%32}"
   export PATH="$_native_build/src/compiler/clc:$_native_build/src/compiler/spirv:$PATH"
   export PKG_CONFIG_LIBDIR=/usr/lib32/pkgconfig:/usr/share/pkgconfig
   export BINDGEN_EXTRA_CLANG_ARGS="--target=i686-unknown-linux-gnu"
   # This preconfigured cross build does not inherit makepkg's optimization
   # flags. Set Meson's optimization for both C/C++ (NVK/NIR) and Rust (NAK).
   # Keep the i686 CPU baseline so repository packages remain portable.
+  if [[ ! -f "$_build/build.ninja" ]]; then
+    meson setup "$_build" "$_src" --cross-file "$startdir/meson-i686.ini" \
+      -Dprefix=/usr -Dlibdir=lib32 -Dsysconfdir=/etc \
+      -Dbuildtype=release -Doptimization=3 -Db_ndebug=true -Db_lto=false \
+      -Dandroid-libbacktrace=disabled -Degl=enabled \
+      -Dgallium-drivers=nouveau,softpipe,zink -Dgallium-extra-hud=false \
+      -Dgallium-rusticl=false -Dgallium-va=disabled -Dgbm=enabled \
+      -Dgles1=disabled -Dgles2=enabled -Dglvnd=enabled -Dglx=dri \
+      -Dlibunwind=disabled -Dllvm=disabled -Dlmsensors=disabled \
+      -Dmicrosoft-clc=disabled -Dmesa-clc=system -Dplatforms=x11,wayland \
+      -Dvalgrind=disabled -Dvideo-codecs=[] -Dvulkan-drivers=nouveau \
+      -Dvulkan-layers=device-select -Dtools=[] -Dzstd=enabled \
+      -Dlegacy-x11=dri2 -Dnouveau-nvenc=false -Dbuild-tests=false
+  fi
   meson configure "$_build" -Dbuildtype=release -Doptimization=3 -Db_ndebug=true
   ninja -C "$_build" -j"${LAB_JOBS:-12}"
 }
 
 package() {
+  local _build="$srcdir/_build"
   DESTDIR="$pkgdir" ninja -C "$_build" install
 
   # Arquivos independentes de arquitetura pertencem ao mesa-git 64-bit.

@@ -1,0 +1,10 @@
+post_install() {
+  echo ">> nvgd-dkms: os hooks DKMS/initramfs serao executados apos esta transacao."
+  echo ">> Confira se concluiram sem erros. Requer kernel >= 7.2 com headers."
+  echo ">> Reinicie para carregar o modulo novo; nao e necessario trocar o Mesa."
+  echo ">> Estado e telemetria: nvgd-status"
+}
+post_upgrade() { post_install; }
+post_remove() {
+  echo ">> nvgd-dkms removido; initramfs regenerado."
+}
