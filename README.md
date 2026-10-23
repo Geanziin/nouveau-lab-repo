@@ -38,7 +38,7 @@ não uma atualização parcial com `pacman -Sy` seguida de instalação isolada.
 | `gpu-screen-recorder-ui-git` | Interface gráfica |
 | `gpu-screen-recorder-notification-git` | Notificações de gravação e replay |
 
-Mesa 32/64-bit: `1:27.0.0_devel.r231966.g4a6f84b4885b-1`.
+Mesa 32/64-bit: `1:27.0.0_devel.r231967.gbccf1fae57b9-1`.
 DKMS: `1.0.0-20`. O build 32-bit otimiza C/C++ e Rust em nível 3,
 incluindo NVK, NIR e NAK. Isso corrige overhead de CPU do build anterior;
 não representa garantia de FPS para um jogo específico.
@@ -46,14 +46,20 @@ H.264 VA-API agora decodifica **diretamente no NVDEC**, sem ponte para Vulkan
 Video, sem carregar NVK e sem consultar suas extensões. Vulkan Video continua
 independente para aplicações Vulkan. A configuração Gallium/NAK foi compilada
 e testada também com `-Dvulkan-drivers=[]`.
-Decode: 200 frames corretos byte a byte contra a referência CPU, incluindo
+Decode: 200 frames H.264 corretos byte a byte contra a referência CPU, incluindo
 Baseline/Main/High, B-frames, até 16 referências, matrizes assimétricas, 1080p
 e 4K. Encode: 72 frames H.264 válidos, consumindo planos Gallium diretamente
 mesmo quando luma/chroma ficam em GEMs diferentes (zero-copy).
+**Novo: AV1 Profile0 decode nativo** — 8-bit NV12 e 10-bit P010, validado em
+168 frames byte a byte contra libdav1d: all-intra, inter, frames ocultos
+(altref, `show_existing_frame`), tiles e Main10. Estado CDF, segment-ID e
+temporal-MV por superfície, sem qualquer objeto Vulkan. Film grain, 4:4:4,
+12-bit e profile 1 são rejeitados explicitamente (sem fallback silencioso).
 O backend NVENC e o upload otimizado de NV12 foram preservados. Corrigido
 também o descritor usado na destruição de objetos de canal no winsys.
 São testes funcionais, não uma medição de desempenho/qualidade de codec.
-HEVC, VP9 e AV1 ainda não são anunciados neste backend;
+HEVC e VP9 ainda não são anunciados neste backend;
+[`NOUVEAU_NVDEC_AV1=0` desativa o AV1]
 [arquitetura, limites e evidências](https://github.com/Geanziin/nvgd/blob/main/docs/native-video.md).
 
 ```bash
