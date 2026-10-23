@@ -22,7 +22,7 @@ def function(text, name):
 
 
 backend = (src / 'nouveau_nvenc_backend.c').read_text()
-h264 = (src / 'nouveau_vk_video_h264.c').read_text()
+h264 = (src / 'nouveau_nvdec_h264.c').read_text()
 code = r'''
 #define _POSIX_C_SOURCE 200809L
 #include <stdint.h>
@@ -37,12 +37,14 @@ enum { SLOT_INPUT_Y, SLOT_INPUT_UV };
 struct buffer { void *map; };
 struct slot { struct buffer buffers[2]; };
 struct nvenc_backend { unsigned coded_height, height, pitch, width; };
-#define NOUVEAU_VK_H264_MAX_BITSTREAM (16u * 1024u * 1024u)
-struct nouveau_vk_h264_bitstream { uint8_t *data; size_t size, capacity; };
+#define NOUVEAU_NVDEC_MAX_BITSTREAM (16u * 1024u * 1024u)
+#define MAX2(a,b) ((a) > (b) ? (a) : (b))
+#define MIN2(a,b) ((a) < (b) ? (a) : (b))
+struct nouveau_nvdec_bitstream { uint8_t *data; size_t size, capacity; };
 '''
 code += 'static uint64_t\n' + function(backend, 'gob_offset') + '\n'
 code += 'static void\n' + function(backend, 'upload') + '\n'
-code += 'bool\n' + function(h264, 'nouveau_vk_h264_append') + '\n'
+code += 'bool\n' + function(h264, 'nouveau_nvdec_bitstream_append') + '\n'
 code += r'''
 static void reference(const struct nvenc_backend *s, struct slot *slot,
                       const uint8_t *y, unsigned yp, const uint8_t *uv, unsigned uvp) {
@@ -88,22 +90,22 @@ int main(void) {
         for(unsigned p=0;p<2;p++) { free(a.buffers[p].map); free(b.buffers[p].map); }
         free(input); cases++;
     }
-    struct nouveau_vk_h264_bitstream stream={0};
+    struct nouveau_nvdec_bitstream stream={0};
     uint8_t data[1031]; memset(data,0x79,sizeof(data));
     const void *buffers[]={data}; const unsigned sizes[]={sizeof(data)};
     unsigned allocations=0; size_t capacity=0;
     for(unsigned i=0;i<1000;i++) {
-        assert(nouveau_vk_h264_append(&stream,1,buffers,sizes));
+        assert(nouveau_nvdec_bitstream_append(&stream,1,buffers,sizes));
         if(capacity!=stream.capacity) { allocations++; capacity=stream.capacity; }
     }
     assert(stream.size==1000*sizeof(data) && stream.capacity>=stream.size);
     assert(allocations<=10);
     for(size_t i=0;i<stream.size;i++) assert(stream.data[i]==0x79);
-    const unsigned too_large[]={NOUVEAU_VK_H264_MAX_BITSTREAM};
-    assert(!nouveau_vk_h264_append(&stream,1,buffers,too_large));
+    const unsigned too_large[]={NOUVEAU_NVDEC_MAX_BITSTREAM};
+    assert(!nouveau_nvdec_bitstream_append(&stream,1,buffers,too_large));
     const void *null_buffer[]={NULL};
-    assert(!nouveau_vk_h264_append(&stream,1,null_buffer,sizes));
-    assert(nouveau_vk_h264_append(&stream,0,NULL,NULL));
+    assert(!nouveau_nvdec_bitstream_append(&stream,1,null_buffer,sizes));
+    assert(nouveau_nvdec_bitstream_append(&stream,0,NULL,NULL));
     free(stream.data);
     printf("PASS: %u NV12 edge/pitch cases; H.264 contents, bounds, %u growth allocations\n",cases,allocations);
     return 0;

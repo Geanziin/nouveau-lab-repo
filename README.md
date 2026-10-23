@@ -38,13 +38,23 @@ não uma atualização parcial com `pacman -Sy` seguida de instalação isolada.
 | `gpu-screen-recorder-ui-git` | Interface gráfica |
 | `gpu-screen-recorder-notification-git` | Notificações de gravação e replay |
 
-Mesa 32/64-bit: `1:27.0.0_devel.r231961.ga1c7b37fcb7b-1`.
+Mesa 32/64-bit: `1:27.0.0_devel.r231966.g4a6f84b4885b-1`.
 DKMS: `1.0.0-20`. O build 32-bit otimiza C/C++ e Rust em nível 3,
 incluindo NVK, NIR e NAK. Isso corrige overhead de CPU do build anterior;
 não representa garantia de FPS para um jogo específico.
-NVENC: upload de NV12 em blocos de 16 bytes no caminho de cópia, preservando
-o zero-copy padrão. Decoder H.264: menos limpeza de memória e realocações
-do bitstream. As fences e a sincronização de vídeo foram mantidas.
+H.264 VA-API agora decodifica **diretamente no NVDEC**, sem ponte para Vulkan
+Video, sem carregar NVK e sem consultar suas extensões. Vulkan Video continua
+independente para aplicações Vulkan. A configuração Gallium/NAK foi compilada
+e testada também com `-Dvulkan-drivers=[]`.
+Decode: 200 frames corretos byte a byte contra a referência CPU, incluindo
+Baseline/Main/High, B-frames, até 16 referências, matrizes assimétricas, 1080p
+e 4K. Encode: 72 frames H.264 válidos, consumindo planos Gallium diretamente
+mesmo quando luma/chroma ficam em GEMs diferentes (zero-copy).
+O backend NVENC e o upload otimizado de NV12 foram preservados. Corrigido
+também o descritor usado na destruição de objetos de canal no winsys.
+São testes funcionais, não uma medição de desempenho/qualidade de codec.
+HEVC, VP9 e AV1 ainda não são anunciados neste backend;
+[arquitetura, limites e evidências](https://github.com/Geanziin/nvgd/blob/main/docs/native-video.md).
 
 ```bash
 sudo pacman -Syu nvgd/mesa-git nvgd/lib32-mesa-git nvgd/nvgd-dkms

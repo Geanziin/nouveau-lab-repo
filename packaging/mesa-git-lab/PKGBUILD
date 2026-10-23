@@ -1,13 +1,13 @@
 # Maintainer: nouveau-lab
-# Mesa do lab (NVENC H.264, decode Vulkan Video, fix Zink YUV) no lugar do
+# Mesa do lab (NVDEC/NVENC nativos, NVK independente) no lugar do
 # mesa-git do CachyOS. Mesmas funcionalidades do pacote do sistema.
 # NVIDIA-DERIVED: private local use only, not for redistribution/upstream.
 pkgbase=mesa-git
 pkgname=mesa-git
 epoch=1
-pkgver=27.0.0_devel.r231961.ga1c7b37fcb7b
+pkgver=27.0.0_devel.r231966.g4a6f84b4885b
 pkgrel=1
-pkgdesc="Mesa (nvgd direct OpenGL driver, GA107 NVENC/VK video decode) - private local use"
+pkgdesc="Mesa (nvgd native OpenGL, NVK and direct GA107 NVDEC/NVENC video) - private local use"
 arch=('x86_64')
 url="https://github.com/Geanziin/nvgd"
 license=('custom')
