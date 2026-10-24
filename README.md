@@ -38,7 +38,7 @@ não uma atualização parcial com `pacman -Sy` seguida de instalação isolada.
 | `gpu-screen-recorder-ui-git` | Interface gráfica |
 | `gpu-screen-recorder-notification-git` | Notificações de gravação e replay |
 
-Mesa 32/64-bit: `1:27.0.0_devel.r231967.gbccf1fae57b9-1`.
+Mesa 32/64-bit: `1:27.0.0_devel.r231968.gde8d36778cff-1`.
 DKMS: `1.0.0-20`. O build 32-bit otimiza C/C++ e Rust em nível 3,
 incluindo NVK, NIR e NAK. Isso corrige overhead de CPU do build anterior;
 não representa garantia de FPS para um jogo específico.
@@ -46,20 +46,27 @@ H.264 VA-API agora decodifica **diretamente no NVDEC**, sem ponte para Vulkan
 Video, sem carregar NVK e sem consultar suas extensões. Vulkan Video continua
 independente para aplicações Vulkan. A configuração Gallium/NAK foi compilada
 e testada também com `-Dvulkan-drivers=[]`.
-Decode: 200 frames H.264 corretos byte a byte contra a referência CPU, incluindo
-Baseline/Main/High, B-frames, até 16 referências, matrizes assimétricas, 1080p
-e 4K. Encode: 72 frames H.264 válidos, consumindo planos Gallium diretamente
-mesmo quando luma/chroma ficam em GEMs diferentes (zero-copy).
-**Novo: AV1 Profile0 decode nativo** — 8-bit NV12 e 10-bit P010, validado em
-168 frames byte a byte contra libdav1d: all-intra, inter, frames ocultos
-(altref, `show_existing_frame`), tiles e Main10. Estado CDF, segment-ID e
-temporal-MV por superfície, sem qualquer objeto Vulkan. Film grain, 4:4:4,
-12-bit e profile 1 são rejeitados explicitamente (sem fallback silencioso).
+**Novo: AV1, HEVC e VP9 decode nativos** — a suíte agora compara **620 frames
+byte a byte** contra as referências CPU, além de 72 frames de encode:
+- H.264: 200 frames (Baseline/Main/High, B-frames, 16 referências, matrizes
+  assimétricas, 1080p e 4K).
+- AV1 Profile0: 168 frames (all-intra, inter, frames ocultos/altref,
+  `show_existing_frame`, tiles e Main10).
+- HEVC Main/Main10: 120 frames (B-frames, P010, tiles e 3840x2160). O driver
+  conta o `sw_hdr_skip_length` do slice header e re-empacota as scaling lists
+  no layout do engine.
+- VP9 Profile0/Profile2: 132 frames (inter com adaptação de probabilidade
+  para trás, tiles e 10-bit). O driver mantém a máquina de estados de headers
+  da spec e adapta as probabilidades a partir dos contadores do engine.
+Encode H.264: 72 frames válidos, consumindo planos Gallium diretamente
+mesmo quando luma/chroma ficam em GEMs diferentes (zero-copy). Film grain do
+AV1, RExt do HEVC e `show_existing_frame` do VP9 são rejeitados
+explicitamente (sem fallback silencioso).
 O backend NVENC e o upload otimizado de NV12 foram preservados. Corrigido
 também o descritor usado na destruição de objetos de canal no winsys.
 São testes funcionais, não uma medição de desempenho/qualidade de codec.
-HEVC e VP9 ainda não são anunciados neste backend;
-[`NOUVEAU_NVDEC_AV1=0` desativa o AV1]
+[`NOUVEAU_NVDEC_AV1=0` desativa o AV1, `NOUVEAU_NVDEC_HEVC=0` o HEVC,
+`NOUVEAU_NVDEC_VP9=0` o VP9]
 [arquitetura, limites e evidências](https://github.com/Geanziin/nvgd/blob/main/docs/native-video.md).
 
 ```bash

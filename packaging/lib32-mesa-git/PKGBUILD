@@ -3,7 +3,7 @@
 # NVIDIA-DERIVED: private local use only, not for redistribution/upstream.
 pkgname=lib32-mesa-git
 epoch=1
-pkgver=27.0.0_devel.r231967.gbccf1fae57b9
+pkgver=27.0.0_devel.r231968.gde8d36778cff
 pkgrel=1
 pkgdesc="Mesa 32-bit (nvgd direct OpenGL driver and NVK) - private local use"
 arch=('x86_64')

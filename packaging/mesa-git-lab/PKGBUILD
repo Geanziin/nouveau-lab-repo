@@ -5,9 +5,9 @@
 pkgbase=mesa-git
 pkgname=mesa-git
 epoch=1
-pkgver=27.0.0_devel.r231967.gbccf1fae57b9
+pkgver=27.0.0_devel.r231968.gde8d36778cff
 pkgrel=1
-pkgdesc="Mesa (nvgd native OpenGL, NVK, direct GA107 NVDEC H.264/AV1 + NVENC video) - private local use"
+pkgdesc="Mesa (nvgd native OpenGL, NVK, direct GA107 NVDEC H.264/AV1/HEVC/VP9 + NVENC video) - private local use"
 arch=('x86_64')
 url="https://github.com/Geanziin/nvgd"
 license=('custom')
